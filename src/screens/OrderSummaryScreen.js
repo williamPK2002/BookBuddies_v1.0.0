@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Image } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Image, TextInput } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -27,6 +27,13 @@ const OrderSummaryScreen = () => {
   const route = useRoute();
   const { cartItems } = route.params;
   const [isProcessing, setIsProcessing] = useState(false);
+  const [selectedCardType, setSelectedCardType] = useState('visa');
+  const [cardDetails, setCardDetails] = useState({
+    cardNumber: '',
+    cardName: '',
+    expiryDate: '',
+    cvv: ''
+  });
 
   // Calculate order totals using the utility function
   const { subtotal, tax, total, formattedSubtotal, formattedTax, formattedTotal } = calculateOrderTotals(cartItems);
@@ -64,7 +71,7 @@ const OrderSummaryScreen = () => {
       
       Alert.alert(
         'Order Placed Successfully!',
-        'Thank you for your purchase.',
+        'Your purchased information has been sent to your email',
         [
           {
             text: 'OK',
@@ -80,18 +87,94 @@ const OrderSummaryScreen = () => {
     }
   };
 
-  const renderOrderItem = ({ item }) => (
-    <View style={styles.orderItem}>
-      <Image 
-        source={getBookImage(item)}
-        style={styles.bookImage}
-        resizeMode="cover"
-      />
-      <View style={styles.itemDetails}>
-        <Text style={styles.bookTitle}>{item.title}</Text>
-        <Text style={styles.bookAuthor}>{item.author}</Text>
-        <Text style={styles.quantity}>Quantity: {item.quantity}</Text>
-        <Text style={styles.price}>฿{item.price}</Text>
+  const handleCardInputChange = (field, value) => {
+    let formattedValue = value;
+    
+    switch (field) {
+      case 'cardNumber':
+        formattedValue = value.replace(/\s/g, '').replace(/(\d{4})/g, '$1 ').trim();
+        break;
+      case 'expiryDate':
+        formattedValue = value.replace(/\D/g, '').replace(/(\d{2})(\d)/, '$1/$2');
+        break;
+      case 'cvv':
+        formattedValue = value.replace(/\D/g, '').slice(0, 3);
+        break;
+    }
+    
+    setCardDetails(prev => ({
+      ...prev,
+      [field]: formattedValue
+    }));
+  };
+
+  const renderPaymentSection = () => (
+    <View style={styles.section}>
+      <Text style={styles.sectionTitle}>Payment Method</Text>
+      
+      <View style={styles.cardTypeContainer}>
+        <TouchableOpacity 
+          style={[styles.cardTypeButton, selectedCardType === 'visa' && styles.selectedCardType]}
+          onPress={() => setSelectedCardType('visa')}
+        >
+          <Ionicons name="card" size={24} color={selectedCardType === 'visa' ? '#87CEEB' : '#666'} />
+          <Text style={[styles.cardTypeText, selectedCardType === 'visa' && styles.selectedCardTypeText]}>Visa</Text>
+        </TouchableOpacity>
+        <TouchableOpacity 
+          style={[styles.cardTypeButton, selectedCardType === 'mastercard' && styles.selectedCardType]}
+          onPress={() => setSelectedCardType('mastercard')}
+        >
+          <Ionicons name="card" size={24} color={selectedCardType === 'mastercard' ? '#87CEEB' : '#666'} />
+          <Text style={[styles.cardTypeText, selectedCardType === 'mastercard' && styles.selectedCardTypeText]}>Mastercard</Text>
+        </TouchableOpacity>
+      </View>
+
+      <View style={styles.cardInputContainer}>
+        <Text style={styles.inputLabel}>Card Number</Text>
+        <TextInput
+          style={styles.cardInput}
+          placeholder="1234 5678 9012 3456"
+          value={cardDetails.cardNumber}
+          onChangeText={(value) => handleCardInputChange('cardNumber', value)}
+          keyboardType="numeric"
+          maxLength={19}
+        />
+      </View>
+
+      <View style={styles.cardInputContainer}>
+        <Text style={styles.inputLabel}>Cardholder Name</Text>
+        <TextInput
+          style={styles.cardInput}
+          placeholder="John Doe"
+          value={cardDetails.cardName}
+          onChangeText={(value) => handleCardInputChange('cardName', value)}
+        />
+      </View>
+
+      <View style={styles.cardDetailsRow}>
+        <View style={[styles.cardInputContainer, { flex: 1, marginRight: 8 }]}>
+          <Text style={styles.inputLabel}>Expiry Date</Text>
+          <TextInput
+            style={styles.cardInput}
+            placeholder="MM/YY"
+            value={cardDetails.expiryDate}
+            onChangeText={(value) => handleCardInputChange('expiryDate', value)}
+            keyboardType="numeric"
+            maxLength={5}
+          />
+        </View>
+        <View style={[styles.cardInputContainer, { flex: 1 }]}>
+          <Text style={styles.inputLabel}>CVV</Text>
+          <TextInput
+            style={styles.cardInput}
+            placeholder="123"
+            value={cardDetails.cvv}
+            onChangeText={(value) => handleCardInputChange('cvv', value)}
+            keyboardType="numeric"
+            maxLength={3}
+            secureTextEntry
+          />
+        </View>
       </View>
     </View>
   );
@@ -129,6 +212,8 @@ const OrderSummaryScreen = () => {
                 </View>
               ))}
             </View>
+
+            {renderPaymentSection()}
 
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>Order Total</Text>
@@ -196,7 +281,7 @@ const styles = StyleSheet.create({
   },
   section: {
     padding: 16,
-    backgroundColor: 'rgba(255, 255, 255, 0.8)',
+    backgroundColor: 'rgba(255, 255, 255, 0.😎',
     margin: 16,
     borderRadius: 8,
   },
@@ -260,7 +345,7 @@ const styles = StyleSheet.create({
   },
   buttonContainer: {
     padding: 16,
-    backgroundColor: 'rgba(255, 255, 255, 0.8)',
+    backgroundColor: 'rgba(255, 255, 255, 0.😎',
     borderTopWidth: 1,
     borderTopColor: '#eee',
   },
@@ -284,6 +369,53 @@ const styles = StyleSheet.create({
     paddingTop: 8,
     borderTopWidth: 1,
     borderTopColor: '#eee',
+  },
+  cardTypeContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    marginBottom: 20,
+  },
+  cardTypeButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 12,
+    borderRadius: 8,
+    backgroundColor: '#f5f5f5',
+    width: '45%',
+  },
+  selectedCardType: {
+    backgroundColor: '#e3f2fd',
+    borderColor: '#87CEEB',
+    borderWidth: 1,
+  },
+  cardTypeText: {
+    marginLeft: 8,
+    fontSize: 16,
+    color: '#666',
+  },
+  selectedCardTypeText: {
+    color: '#87CEEB',
+    fontWeight: 'bold',
+  },
+  cardInputContainer: {
+    marginBottom: 16,
+  },
+  inputLabel: {
+    fontSize: 14,
+    color: '#666',
+    marginBottom: 8,
+  },
+  cardInput: {
+    backgroundColor: '#fff',
+    borderRadius: 8,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: '#ddd',
+    fontSize: 16,
+  },
+  cardDetailsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
   },
 });
 
